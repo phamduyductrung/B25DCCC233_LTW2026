@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý điểm sinh viên</title>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 25px;
+            font-family: Arial, sans-serif;
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2563eb;
+        }
+
+        .form-box, .stats, .table-box {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px #00000010;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        input, select, button {
+            padding: 11px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            font-size: 15px;
+        }
+
+        button {
+            cursor: pointer;
+            border: none;
+            color: white;
+            background: #2563eb;
+        }
+
+        .add-btn {
+            margin-top: 12px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .filters button {
+            background: #64748b;
+        }
+
+        .filters button.active {
+            background: #2563eb;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            gap: 15px;
+            flex-wrap: wrap;
+            font-weight: bold;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+
+        th {
+            background: #dbeafe;
+        }
+
+        .delete-btn {
+            background: #dc2626;
+        }
+
+        .error {
+            color: #dc2626;
+            margin-top: 10px;
+        }
+
+        .good {
+            color: #15803d;
+            font-weight: bold;
+        }
+
+        .fail {
+            color: #dc2626;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .table-box {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // Component con: hien thi mot sinh vien
+        const StudentItem = ({ student, onDelete }) => {
+            const { id, name, score, class: studentClass } = student;
+
+            return (
+                <tr>
+                    <td>{id}</td>
+                    <td>{name}</td>
+                    <td className={score >= 8 ? "good" : score < 5 ? "fail" : ""}>
+                        {score}
+                    </td>
+                    <td>{studentClass}</td>
+                    <td>
+                        <button
+                            className="delete-btn"
+                            onClick={() => onDelete(id)}
+                        >
+                            Xóa
+                        </button>
+                    </td>
+                </tr>
+            );
+        };
+
+        // Component con: hien thi danh sach
+        const StudentList = ({ students, onDelete }) => {
+            return (
+                <div className="table-box">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Họ tên</th>
+                                <th>Điểm</th>
+                                <th>Lớp</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {students.length === 0 ? (
+                                <tr>
+                                    <td colSpan="5">Không có sinh viên</td>
+                                </tr>
+                            ) : (
+                                students.map(student => (
+                                    <StudentItem
+                                        key={student.id}
+                                        student={student}
+                                        onDelete={onDelete}
+                                    />
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            );
+        };
+
+        // Component cha: quan ly state va cac chuc nang
+        const App = () => {
+            const [students, setStudents] = useState([
+                { id: 1, name: "Nguyen Van An", score: 8.5, class: "D25CQCN01" },
+                { id: 2, name: "Tran Thi Binh", score: 4.0, class: "D25CQCN01" },
+                { id: 3, name: "Le Van Cuong", score: 6.5, class: "D25CQCN02" }
+            ]);
+
+            const [name, setName] = useState("");
+            const [score, setScore] = useState("");
+            const [studentClass, setStudentClass] = useState("");
+            const [filter, setFilter] = useState("all");
+            const [error, setError] = useState("");
+
+            const addStudent = (event) => {
+                event.preventDefault();
+
+                if (
+                    name.trim() === "" ||
+                    score.trim() === "" ||
+                    studentClass.trim() === ""
+                ) {
+                    setError("Vui lòng nhập đầy đủ thông tin!");
+                    return;
+                }
+
+                const numberScore = Number(score);
+
+                if (
+                    !Number.isFinite(numberScore) ||
+                    numberScore < 0 ||
+                    numberScore > 10
+                ) {
+                    setError("Điểm phải nằm trong khoảng từ 0 đến 10!");
+                    return;
+                }
+
+                const newStudent = {
+                    id: students.reduce(
+                        (maxId, student) => Math.max(maxId, student.id), 0
+                    ) + 1,
+                    name: name.trim(),
+                    score: numberScore,
+                    class: studentClass.trim()
+                };
+
+                setStudents([...students, newStudent]);
+                setName("");
+                setScore("");
+                setStudentClass("");
+                setError("");
+            };
+
+            const deleteStudent = (id) => {
+                setStudents(students.filter(student => student.id !== id));
+            };
+
+            const filteredStudents = students.filter(student => {
+                if (filter === "good") return student.score >= 8;
+                if (filter === "fail") return student.score < 5;
+                return true;
+            });
+
+            const averageScore = students.length === 0
+                ? 0
+                : students.reduce(
+                    (total, student) => total + student.score, 0
+                ) / students.length;
+
+            return (
+                <div className="container">
+                    <h1>QUẢN LÝ ĐIỂM SINH VIÊN</h1>
+
+                    <div className="stats">
+                        <span>
+                            Tổng sinh viên: {students.length}
+                        </span>
+                        <span>
+                            Điểm trung bình: {averageScore.toFixed(2)}
+                        </span>
+                    </div>
+
+                    <div className="form-box">
+                        <h2>Thêm sinh viên</h2>
+
+                        <form onSubmit={addStudent}>
+                            <div className="form-grid">
+                                <input
+                                    type="text"
+                                    placeholder="Họ và tên"
+                                    value={name}
+                                    onChange={event => setName(event.target.value)}
+                                />
+
+                                <input
+                                    type="number"
+                                    placeholder="Điểm (0 - 10)"
+                                    min="0"
+                                    max="10"
+                                    step="0.1"
+                                    value={score}
+                                    onChange={event => setScore(event.target.value)}
+                                />
+
+                                <input
+                                    type="text"
+                                    placeholder="Lớp"
+                                    value={studentClass}
+                                    onChange={event => setStudentClass(event.target.value)}
+                                />
+                            </div>
+
+                            <button className="add-btn" type="submit">
+                                Thêm sinh viên
+                            </button>
+
+                            {error && <p className="error">{error}</p>}
+                        </form>
+                    </div>
+
+                    <div className="filters">
+                        <button
+                            className={filter === "all" ? "active" : ""}
+                            onClick={() => setFilter("all")}
+                        >
+                            Tất cả
+                        </button>
+
+                        <button
+                            className={filter === "good" ? "active" : ""}
+                            onClick={() => setFilter("good")}
+                        >
+                            Sinh viên giỏi (≥ 8)
+                        </button>
+
+                        <button
+                            className={filter === "fail" ? "active" : ""}
+                            onClick={() => setFilter("fail")}
+                        >
+                            Trượt môn (&lt; 5)
+                        </button>
+                    </div>
+
+                    <StudentList
+                        students={filteredStudents}
+                        onDelete={deleteStudent}
+                    />
+
+                    <p>
+                        Đang hiển thị {filteredStudents.length} sinh viên.
+                    </p>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById("root"));
+        root.render(<App />);
+    </script>
+</body>
+</html>
